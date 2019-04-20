@@ -2,9 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Austin.CleanNetCoreSdks
 {
@@ -24,47 +21,52 @@ namespace Austin.CleanNetCoreSdks
             var ret = new HashSet<Version>();
 
             var ser = new JsonSerializer();
-            using (var fs = File.OpenRead(@"c:\temp\catalog.json"))
-            using (var reader = new JsonTextReader(new StreamReader(fs)))
+            foreach (var instanceDir in Directory.GetDirectories(instancesDir))
             {
-                var catalog = ser.Deserialize<Catalog>(reader);
-            }
-            foreach (var instance in Directory.GetDirectories(instancesDir))
-            {
-                Catalog catalog;
-
-                using (var fs = File.OpenRead(Path.Combine(instance, "catalog.json")))
+                using (var fs = File.OpenRead(Path.Combine(instanceDir, "catalog.json")))
                 using (var reader = new JsonTextReader(new StreamReader(fs)))
                 {
-                    catalog = ser.Deserialize<Catalog>(reader);
+                    var catalog = ser.Deserialize<Catalog>(reader);
                 }
-
-                foreach (var pack in catalog.Packages)
+                foreach (var instance in Directory.GetDirectories(instancesDir))
                 {
-                    if (!pack.ID.StartsWith("Microsoft.Net.Core.SDK."))
-                        continue;
-                    if (pack.DetectConditions == null)
-                        continue;
-                    if (pack.DetectConditions.Expression != "CliX64RegKey" && pack.DetectConditions.Expression != "CliX86RegKey")
-                        continue;
+                    Catalog catalog;
 
-                    if (pack.DetectConditions.Conditions.Length != 1)
-                        throw new Exception("Unexpected number of conditions on " + pack.ID);
+                    using (var fs = File.OpenRead(Path.Combine(instance, "catalog.json")))
+                    using (var reader = new JsonTextReader(new StreamReader(fs)))
+                    {
+                        catalog = ser.Deserialize<Catalog>(reader);
+                    }
 
-                    var cond = pack.DetectConditions.Conditions[0];
+                    foreach (var pack in catalog.Packages)
+                    {
+                        if (!pack.ID.StartsWith("Microsoft.Net.Core.SDK."))
+                            continue;
+                        if (pack.DetectConditions == null)
+                            continue;
+                        if (pack.DetectConditions.Expression != "CliX64RegKey" && pack.DetectConditions.Expression != "CliX86RegKey")
+                            continue;
 
-                    var key = cond["registryKey"];
-                    if (key != "HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\dotnet\\Setup\\InstalledVersions\\x86\\sdk" &&
-                        key != "HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\dotnet\\Setup\\InstalledVersions\\x64\\sdk")
-                        continue;
+                        if (pack.DetectConditions.Conditions.Length != 1)
+                            throw new Exception("Unexpected number of conditions on " + pack.ID);
 
-                    if (cond["registryType"] != "Integer")
-                        throw new Exception("Unexpected 'registryType' for " + pack.ID);
-                    if (cond["registryData"] != "1")
-                        throw new Exception("Unexpected 'registryData' for " + pack.ID);
+                        var cond = pack.DetectConditions.Conditions[0];
 
-                    var ver = cond["registryValue"];
-                    ret.Add(Version.Parse(ver));
+                        var key = cond["registryKey"];
+                        if (!key.StartsWith(@"HKEY_LOCAL_MACHINE\SOFTWARE\"))
+                            continue;
+                        if (!key.EndsWith(@"\dotnet\Setup\InstalledVersions\x64\sdk") &&
+                            !key.EndsWith(@"\dotnet\Setup\InstalledVersions\x86\sdk"))
+                            continue;
+
+                        if (cond["registryType"] != "Integer")
+                            throw new Exception("Unexpected 'registryType' for " + pack.ID);
+                        if (cond["registryData"] != "1")
+                            throw new Exception("Unexpected 'registryData' for " + pack.ID);
+
+                        var ver = cond["registryValue"];
+                        ret.Add(Version.Parse(ver));
+                    }
                 }
             }
 
