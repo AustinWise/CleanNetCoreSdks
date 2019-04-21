@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace Austin.CleanNetCoreSdks
 {
@@ -27,9 +28,17 @@ namespace Austin.CleanNetCoreSdks
 
         void Run(string[] args)
         {
+            var sdks = DotnetSdk.GetInstalledSdks().OrderBy(s => s.Version).ToArray();
+            Console.WriteLine("Installed SDKs:");
+            foreach (var sdk in sdks)
+            {
+                string bitName = sdk.Is64Bit ? "x64" : "x86";
+                Console.WriteLine($"\t{bitName} {sdk.Version}");
+            }
+
             var vsVer = VSCatalog.GetVsUsedVersions();
             Console.WriteLine("Visual Studio's required versions:");
-            foreach (var v in vsVer)
+            foreach (var v in vsVer.OrderBy(k => k))
             {
                 Console.WriteLine("\t" + v.ToString());
             }
