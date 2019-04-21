@@ -7,8 +7,7 @@ namespace Austin.CleanNetCoreSdks
 {
     static class VSCatalog
     {
-        //TODO: prerelease versions
-        public static HashSet<Version> GetVsUsedVersions()
+        public static HashSet<SdkVersion> GetVsUsedVersions()
         {
             var programDataDir = Environment.GetEnvironmentVariable("ProgramData");
             if (programDataDir == null)
@@ -18,7 +17,7 @@ namespace Austin.CleanNetCoreSdks
             if (!Directory.Exists(instancesDir))
                 throw new ExitException("Visual Studio instances directory does not exist: " + instancesDir);
 
-            var ret = new HashSet<Version>();
+            var ret = new HashSet<SdkVersion>();
 
             var ser = new JsonSerializer();
             foreach (var instanceDir in Directory.GetDirectories(instancesDir))
@@ -65,7 +64,7 @@ namespace Austin.CleanNetCoreSdks
                             throw new Exception("Unexpected 'registryData' for " + pack.ID);
 
                         var ver = cond["registryValue"];
-                        ret.Add(Version.Parse(ver));
+                        ret.Add(SdkVersion.Parse(ver));
                     }
                 }
             }
