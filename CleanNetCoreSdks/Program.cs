@@ -71,7 +71,7 @@ namespace Austin.CleanNetCoreSdks
 
         void Run()
         {
-            var sdks = DotnetSdk.GetInstalledSdks().OrderBy(s => s.Version).ToArray();
+            var sdks = DotNetCoreSdk.GetInstalledSdks().OrderBy(s => s.Version).ToArray();
             Console.WriteLine("Installed SDKs:");
             foreach (var sdk in sdks)
             {

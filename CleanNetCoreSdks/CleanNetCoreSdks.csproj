@@ -49,7 +49,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DotnetSdk.cs" />
+    <Compile Include="DotNetCoreSdk.cs" />
     <Compile Include="SdkVersion.cs" />
     <Compile Include="VSCatalog.cs" />
     <Compile Include="ExitException.cs" />

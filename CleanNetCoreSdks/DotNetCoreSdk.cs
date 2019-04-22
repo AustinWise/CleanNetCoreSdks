@@ -4,11 +4,11 @@ using System.Linq;
 
 namespace Austin.CleanNetCoreSdks
 {
-    class DotnetSdk
+    public class DotNetCoreSdk
     {
         const string KEY_PATH = @"SOFTWARE\dotnet\Setup\InstalledVersions\{0}\sdk";
 
-        static void GetInstalledSdks(List<DotnetSdk> ret, RegistryKey hive, bool is64Bit)
+        static void GetInstalledSdks(List<DotNetCoreSdk> ret, RegistryKey hive, bool is64Bit)
         {
             string path = string.Format(KEY_PATH, is64Bit ? "x64" : "x86");
             using (var key = hive.OpenSubKey(path, false))
@@ -16,13 +16,13 @@ namespace Austin.CleanNetCoreSdks
                 if (key == null)
                     return;
 
-                ret.AddRange(key.GetValueNames().Select(v => new DotnetSdk(is64Bit, SdkVersion.Parse(v))));
+                ret.AddRange(key.GetValueNames().Select(v => new DotNetCoreSdk(is64Bit, SdkVersion.Parse(v))));
             }
         }
 
-        public static List<DotnetSdk> GetInstalledSdks()
+        public static List<DotNetCoreSdk> GetInstalledSdks()
         {
-            var ret = new List<DotnetSdk>();
+            var ret = new List<DotNetCoreSdk>();
             using (var reg = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32))
             {
                 GetInstalledSdks(ret, reg, true);
@@ -31,7 +31,7 @@ namespace Austin.CleanNetCoreSdks
             return ret;
         }
 
-        private DotnetSdk(bool is64Bit, SdkVersion version)
+        public DotNetCoreSdk(bool is64Bit, SdkVersion version)
         {
             Is64Bit = is64Bit;
             Version = version;
