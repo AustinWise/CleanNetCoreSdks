@@ -163,7 +163,10 @@ namespace Austin.CleanNetCoreSdks
                 foreach (var sdk in delPlan.SdksToDelete)
                 {
                     Console.WriteLine("\tUninstalling: " + sdk.ToString());
-                    uninstaller.Uninstall(sdk);
+                    if (!uninstaller.Uninstall(sdk))
+                    {
+                        WriteWithColor(ConsoleColor.Yellow, "\tCould not find uninstall command.");
+                    }
                 }
             }
             else
@@ -172,7 +175,4 @@ namespace Austin.CleanNetCoreSdks
             }
         }
     }
-
-
-
 }
