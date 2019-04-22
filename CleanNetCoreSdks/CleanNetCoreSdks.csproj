@@ -22,6 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -31,6 +32,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Mono.Options, Version=5.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -52,6 +54,7 @@
     <Compile Include="DeletionPlan.cs" />
     <Compile Include="DotNetCoreSdk.cs" />
     <Compile Include="SdkVersion.cs" />
+    <Compile Include="Uninstaller.cs" />
     <Compile Include="VSCatalog.cs" />
     <Compile Include="ExitException.cs" />
     <Compile Include="Program.cs" />
