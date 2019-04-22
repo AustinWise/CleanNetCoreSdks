@@ -152,12 +152,20 @@ namespace Austin.CleanNetCoreSdks
                 Console.WriteLine();
             }
 
-            Console.WriteLine("SDKs to delete:");
-            foreach (var sdk in delPlan.SdksToDelete)
+            if (delPlan.SdksToDelete.Count == 0)
             {
-                Console.WriteLine("\t" + sdk);
+                Console.WriteLine("No SDKs to delete.");
+                return;
             }
-            Console.WriteLine();
+            else
+            {
+                Console.WriteLine("SDKs to delete:");
+                foreach (var sdk in delPlan.SdksToDelete)
+                {
+                    Console.WriteLine("\t" + sdk);
+                }
+                Console.WriteLine();
+            }
 
             if (DryRun)
             {
