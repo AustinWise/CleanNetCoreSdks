@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Austin.CleanNetCoreSdks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
 
 namespace Austin.CleanerUnitTests
 {
@@ -90,6 +91,84 @@ namespace Austin.CleanerUnitTests
             {
                 Assert.AreEqual(allVersions[i], sortedVersion[i].ToString());
             }
+        }
+
+        [TestMethod]
+        public void TestRuntimeBand()
+        {
+            var releases = JsonConvert.DeserializeObject<DotnetRelease[]>(Properties.Resources.DotnetReleasesJson);
+
+            foreach (var release in releases)
+            {
+                if (release.RuntimeVersion == null)
+                {
+                    //Some releases do not contain a new runtime version.
+                    continue;
+                }
+
+                var expected = SdkVersion.Parse(release.RuntimeVersion);
+                var actual = SdkVersion.Parse(release.SdkVersion).IncludedRuntimeBand;
+
+                Assert.AreEqual(expected.Major, actual.Major);
+                //V1 includes both 1.0 and 1.1 runtimes.
+                if (expected.Major == 1)
+                    Assert.AreEqual(1, actual.Minor);
+                else
+                    Assert.AreEqual(expected.Minor, actual.Minor);
+                Assert.AreEqual(0, actual.Patch);
+                Assert.IsTrue(string.IsNullOrEmpty(actual.PrereleaseLabel));
+            }
+        }
+
+        [TestMethod]
+        public void TestSdkBand()
+        {
+            SdkVersion ver;
+
+            ver = SdkVersion.Parse("1.0.3").SdkVersionBand;
+            Assert.AreEqual(1, ver.Major);
+            Assert.AreEqual(0, ver.Minor);
+            Assert.AreEqual(0, ver.Patch);
+            Assert.IsTrue(string.IsNullOrEmpty(ver.PrereleaseLabel));
+
+            ver = SdkVersion.Parse("1.1.13").SdkVersionBand;
+            Assert.AreEqual(1, ver.Major);
+            Assert.AreEqual(1, ver.Minor);
+            Assert.AreEqual(0, ver.Patch);
+            Assert.IsTrue(string.IsNullOrEmpty(ver.PrereleaseLabel));
+
+            ver = SdkVersion.Parse("2.0.0").SdkVersionBand;
+            Assert.AreEqual(2, ver.Major);
+            Assert.AreEqual(0, ver.Minor);
+            Assert.AreEqual(0, ver.Patch);
+            Assert.IsTrue(string.IsNullOrEmpty(ver.PrereleaseLabel));
+
+            ver = SdkVersion.Parse("2.1.101").SdkVersionBand;
+            Assert.AreEqual(2, ver.Major);
+            Assert.AreEqual(1, ver.Minor);
+            Assert.AreEqual(100, ver.Patch);
+            Assert.IsTrue(string.IsNullOrEmpty(ver.PrereleaseLabel));
+
+            ver = SdkVersion.Parse("2.1.300").SdkVersionBand;
+            Assert.AreEqual(2, ver.Major);
+            Assert.AreEqual(1, ver.Minor);
+            Assert.AreEqual(300, ver.Patch);
+            Assert.IsTrue(string.IsNullOrEmpty(ver.PrereleaseLabel));
+
+            ver = SdkVersion.Parse("2.2.100-preview1-009349").SdkVersionBand;
+            Assert.AreEqual(2, ver.Major);
+            Assert.AreEqual(2, ver.Minor);
+            Assert.AreEqual(100, ver.Patch);
+            Assert.IsTrue(string.IsNullOrEmpty(ver.PrereleaseLabel));
+        }
+
+        class DotnetRelease
+        {
+            [JsonProperty("version-runtime")]
+            public string RuntimeVersion { get; set; }
+
+            [JsonProperty("version-sdk")]
+            public string SdkVersion { get; set; }
         }
     }
 }

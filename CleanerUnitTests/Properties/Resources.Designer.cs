@@ -61,11 +61,36 @@ namespace Austin.CleanerUnitTests.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 1.0.0-preview2-003121
+        ///   Looks up a localized string similar to [
+        ///    {
+        ///		&quot;version-runtime&quot;: &quot;1.0.15&quot;,
+        ///		&quot;version-sdk&quot;: &quot;1.1.13&quot;,
+        ///		&quot;version-runtime-display&quot;: &quot;1.0.15&quot;,
+        ///		&quot;version-sdk-display&quot;: &quot;1.1.13&quot;,
+        ///		&quot;version-aspnetcoremodule&quot;: &quot;&quot;,
+        ///		&quot;date&quot;: &quot;2019-03-12&quot;,
+        ///		&quot;security&quot;: &quot;True&quot;,
+        ///		&quot;lts-runtime&quot;: &quot;false&quot;,
+        ///		&quot;lts-sdk&quot;: &quot;false&quot;,
+        ///		&quot;vs-version&quot;: &quot;15.0&quot;,
+        ///		&quot;csharp-language&quot;: &quot;&quot;,
+        ///		&quot;fsharp-language&quot;: &quot;&quot;,
+        ///		&quot;vb-language&quot;: &quot;15.0&quot;,
+        ///		&quot;release-notes&quot;: &quot;https://github.com/dotnet/core/blob/master/release-notes/1.0/1.0.15/1.0.15.md&quot;,
+        ///		&quot;checksums-runtime&quot;: &quot;https [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string DotnetReleasesJson {
+            get {
+                return ResourceManager.GetString("DotnetReleasesJson", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 1.0.0-preview2.1-003177
+        ///1.0.0-preview2-003121
         ///1.0.0-preview2-003131
         ///1.0.0-preview2-003148
         ///1.0.0-preview2-003156
-        ///1.0.0-preview2.1-003177
         ///1.0.1
         ///1.0.4
         ///1.1.4
