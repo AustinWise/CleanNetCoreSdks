@@ -1,7 +1,8 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 
 namespace Austin.CleanNetCoreSdks
 {
@@ -35,10 +36,9 @@ namespace Austin.CleanNetCoreSdks
             Catalog catalog;
 
             using (var fs = File.OpenRead(Path.Combine(instancePath, "catalog.json")))
-            using (var reader = new JsonTextReader(new StreamReader(fs)))
             {
-                var ser = new JsonSerializer();
-                catalog = ser.Deserialize<Catalog>(reader);
+                var dataSer = new DataContractJsonSerializer(typeof(Catalog));
+                catalog = (Catalog)dataSer.ReadObject(fs);
             }
 
             foreach (var pack in catalog.Packages)
@@ -55,45 +55,64 @@ namespace Austin.CleanNetCoreSdks
 
                 var cond = pack.DetectConditions.Conditions[0];
 
-                var key = cond["registryKey"];
+                var key = cond.RegistryKey;
                 if (!key.StartsWith(@"HKEY_LOCAL_MACHINE\SOFTWARE\"))
                     continue;
                 if (!key.EndsWith(@"\dotnet\Setup\InstalledVersions\x64\sdk") &&
                     !key.EndsWith(@"\dotnet\Setup\InstalledVersions\x86\sdk"))
                     continue;
 
-                if (cond["registryType"] != "Integer")
+                if (cond.RegistryType != "Integer")
                     throw new Exception("Unexpected 'registryType' for " + pack.ID);
-                if (cond["registryData"] != "1")
+                if (cond.RegistryData != "1")
                     throw new Exception("Unexpected 'registryData' for " + pack.ID);
 
-                var ver = cond["registryValue"];
+                var ver = cond.RegistryValue;
                 ret.Add(SdkVersion.Parse(ver));
             }
         }
 
+        [DataContract]
         class Catalog
         {
-            [JsonProperty("packages")]
+            [DataMember(Name = "packages")]
             public List<Package> Packages { get; set; }
         }
 
+        [DataContract]
         class Package
         {
-            [JsonProperty("id")]
+            [DataMember(Name = "id")]
             public string ID { get; set; }
 
-            [JsonProperty("detectConditions")]
+            [DataMember(Name = "detectConditions")]
             public DetectConditions DetectConditions { get; set; }
         }
 
+        [DataContract]
         class DetectConditions
         {
-            [JsonProperty("expression")]
+            [DataMember(Name = "expression")]
             public string Expression { get; set; }
 
-            [JsonProperty("conditions")]
-            public Dictionary<string, string>[] Conditions { get; set; }
+            [DataMember(Name = "conditions")]
+            public RegistryMatchCondition[] Conditions { get; set; }
+        }
+
+        [DataContract]
+        class RegistryMatchCondition
+        {
+            [DataMember(Name = "registryKey")]
+            public string RegistryKey { get; set; }
+
+            [DataMember(Name = "registryType")]
+            public string RegistryType { get; set; }
+
+            [DataMember(Name = "registryData")]
+            public string RegistryData { get; set; }
+
+            [DataMember(Name = "registryValue")]
+            public string RegistryValue { get; set; }
         }
     }
 }
