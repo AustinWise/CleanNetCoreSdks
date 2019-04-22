@@ -1,35 +1,74 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 
 namespace Austin.CleanNetCoreSdks
 {
     public class DotNetCoreSdk : IEquatable<DotNetCoreSdk>
     {
-        const string KEY_PATH = @"SOFTWARE\dotnet\Setup\InstalledVersions\{0}\sdk";
-
-        static void GetInstalledSdks(List<DotNetCoreSdk> ret, RegistryKey hive, bool is64Bit)
+        static void GetInstalledFromRegistry(HashSet<DotNetCoreSdk> ret, RegistryKey hive, bool is64Bit)
         {
-            string path = string.Format(KEY_PATH, is64Bit ? "x64" : "x86");
+            const string REGISTRY_KEY_PATH = @"SOFTWARE\dotnet\Setup\InstalledVersions\{0}\sdk";
+
+            string path = string.Format(REGISTRY_KEY_PATH, is64Bit ? "x64" : "x86");
             using (var key = hive.OpenSubKey(path, false))
             {
                 if (key == null)
+                {
+                    //no versions installed
                     return;
+                }
 
-                ret.AddRange(key.GetValueNames().Select(v => new DotNetCoreSdk(is64Bit, SdkVersion.Parse(v))));
+                foreach (var sdkVersionString in key.GetValueNames())
+                {
+                    ret.Add(new DotNetCoreSdk(is64Bit, SdkVersion.Parse(sdkVersionString)));
+                }
+            }
+        }
+
+        static void GetInstalledFromFileSystem(HashSet<DotNetCoreSdk> ret, bool is64Bit)
+        {
+            if (is64Bit && !Environment.Is64BitOperatingSystem)
+                return;
+
+            string progFilesEnvVar;
+            if (!is64Bit && Environment.Is64BitOperatingSystem)
+                progFilesEnvVar = "ProgramFiles(x86)";
+            else
+                progFilesEnvVar = "ProgramFiles";
+
+            string progFiles = Environment.GetEnvironmentVariable(progFilesEnvVar);
+            if (string.IsNullOrEmpty(progFiles) || !Directory.Exists(progFiles))
+                throw new Exception("Could not find Program Files from environmental variable: " + progFilesEnvVar);
+
+            string dotnetSdksFolder = Path.Combine(progFiles, "dotnet", "sdk");
+            if (!Directory.Exists(dotnetSdksFolder))
+            {
+                //assume there are no versions installed if the folder does not exist
+                return;
+            }
+
+            foreach (var di in new DirectoryInfo(dotnetSdksFolder).GetDirectories())
+            {
+                //assume nuget fallback folder
+                if (!char.IsNumber(di.Name[0]))
+                    continue;
+                ret.Add(new DotNetCoreSdk(is64Bit, SdkVersion.Parse(di.Name)));
             }
         }
 
         public static List<DotNetCoreSdk> GetInstalledSdks()
         {
-            var ret = new List<DotNetCoreSdk>();
+            var ret = new HashSet<DotNetCoreSdk>();
             using (var reg = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32))
             {
-                GetInstalledSdks(ret, reg, true);
-                GetInstalledSdks(ret, reg, false);
+                GetInstalledFromRegistry(ret, reg, is64Bit: true);
+                GetInstalledFromRegistry(ret, reg, is64Bit: false);
             }
-            return ret;
+            GetInstalledFromFileSystem(ret, is64Bit: true);
+            GetInstalledFromFileSystem(ret, is64Bit: false);
+            return new List<DotNetCoreSdk>(ret);
         }
 
         public DotNetCoreSdk(bool is64Bit, SdkVersion version)
