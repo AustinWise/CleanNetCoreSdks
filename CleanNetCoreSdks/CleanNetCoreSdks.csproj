@@ -51,6 +51,7 @@
     <Compile Include="DotNetCoreSdk.cs" />
     <Compile Include="Mono.Options.cs" />
     <Compile Include="SdkVersion.cs" />
+    <Compile Include="Security.cs" />
     <Compile Include="Uninstaller.cs" />
     <Compile Include="VSCatalog.cs" />
     <Compile Include="ExitException.cs" />

@@ -173,6 +173,9 @@ namespace Austin.CleanNetCoreSdks
                 return;
             }
 
+            if (!Security.IsUserAdmin())
+                throw new ExitException("User is not an administrator, exiting.");
+
             if (!Force)
                 Console.Write("Type 'yes' to delete these SDKs: ");
             if (Force || Console.ReadLine() == "yes")
@@ -190,7 +193,7 @@ namespace Austin.CleanNetCoreSdks
             }
             else
             {
-                throw new ExitException("Aborting uninstall.");
+                throw new ExitException("Uninstall aborted by user.");
             }
         }
     }
