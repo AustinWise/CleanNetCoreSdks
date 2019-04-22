@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace Austin.CleanNetCoreSdks
 {
-    class SdkVersion : IEquatable<SdkVersion>, IComparable<SdkVersion>
+    public class SdkVersion : IEquatable<SdkVersion>, IComparable<SdkVersion>
     {
         static Regex sMatcher = new Regex(@"^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?<pre>-.*)?$");
 
