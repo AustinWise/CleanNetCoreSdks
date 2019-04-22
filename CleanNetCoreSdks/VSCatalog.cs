@@ -9,15 +9,15 @@ namespace Austin.CleanNetCoreSdks
     {
         public static HashSet<SdkVersion> GetVsUsedVersions()
         {
+            var ret = new HashSet<SdkVersion>();
+
             var programDataDir = Environment.GetEnvironmentVariable("ProgramData");
             if (programDataDir == null)
-                throw new ExitException("Could not find ProgramData environmental variable.");
+                throw new ExitException("Could not find ProgramData environmental variable!");
 
             string instancesDir = Path.Combine(programDataDir, "Microsoft", "VisualStudio", "Packages", "_Instances");
             if (!Directory.Exists(instancesDir))
-                throw new ExitException("Visual Studio instances directory does not exist: " + instancesDir);
-
-            var ret = new HashSet<SdkVersion>();
+                return ret;
 
             var ser = new JsonSerializer();
             foreach (var instanceDir in Directory.GetDirectories(instancesDir))
