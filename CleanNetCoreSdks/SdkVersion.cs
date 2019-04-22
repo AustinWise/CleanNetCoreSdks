@@ -8,7 +8,12 @@ namespace Austin.CleanNetCoreSdks
     {
         static Regex sMatcher = new Regex(@"^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?<pre>-.*)?$");
 
-        private SdkVersion(int major, int minor, int patch, string prereleaseLabel)
+        public SdkVersion(int major, int minor, int patch)
+            : this(major, minor, patch, string.Empty)
+        {
+        }
+
+        public SdkVersion(int major, int minor, int patch, string prereleaseLabel)
         {
             Major = major;
             Minor = minor;

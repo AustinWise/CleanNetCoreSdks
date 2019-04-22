@@ -1,10 +1,11 @@
 ﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Austin.CleanNetCoreSdks
 {
-    public class DotNetCoreSdk
+    public class DotNetCoreSdk : IEquatable<DotNetCoreSdk>
     {
         const string KEY_PATH = @"SOFTWARE\dotnet\Setup\InstalledVersions\{0}\sdk";
 
@@ -38,6 +39,34 @@ namespace Austin.CleanNetCoreSdks
         }
 
         public bool Is64Bit { get; }
+        public string Architecture => Is64Bit ? "x64" : "x86";
         public SdkVersion Version { get; }
+
+        public override string ToString()
+        {
+            return $"{Architecture} {Version}";
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DotNetCoreSdk);
+        }
+
+        public bool Equals(DotNetCoreSdk other)
+        {
+            if (other == null)
+                return false;
+            if (this.Is64Bit != other.Is64Bit)
+                return false;
+            return this.Version.Equals(other.Version);
+        }
+
+        public override int GetHashCode()
+        {
+            int ret = Version.GetHashCode();
+            if (!Is64Bit)
+                ret ^= ~0;
+            return ret;
+        }
     }
 }

@@ -59,6 +59,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="SdkVersionUnitTests.cs" />
+    <Compile Include="DeletionPlanTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
