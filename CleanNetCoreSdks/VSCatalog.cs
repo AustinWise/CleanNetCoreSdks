@@ -17,59 +17,59 @@ namespace Austin.CleanNetCoreSdks
 
             string instancesDir = Path.Combine(programDataDir, "Microsoft", "VisualStudio", "Packages", "_Instances");
             if (!Directory.Exists(instancesDir))
-                return ret;
-
-            var ser = new JsonSerializer();
-            foreach (var instanceDir in Directory.GetDirectories(instancesDir))
             {
-                using (var fs = File.OpenRead(Path.Combine(instanceDir, "catalog.json")))
-                using (var reader = new JsonTextReader(new StreamReader(fs)))
-                {
-                    var catalog = ser.Deserialize<Catalog>(reader);
-                }
-                foreach (var instance in Directory.GetDirectories(instancesDir))
-                {
-                    Catalog catalog;
+                //If we can't find the Visual Studio folder, assume Visual Studio is not installed.
+                return ret;
+            }
 
-                    using (var fs = File.OpenRead(Path.Combine(instance, "catalog.json")))
-                    using (var reader = new JsonTextReader(new StreamReader(fs)))
-                    {
-                        catalog = ser.Deserialize<Catalog>(reader);
-                    }
-
-                    foreach (var pack in catalog.Packages)
-                    {
-                        if (!pack.ID.StartsWith("Microsoft.Net.Core.SDK."))
-                            continue;
-                        if (pack.DetectConditions == null)
-                            continue;
-                        if (pack.DetectConditions.Expression != "CliX64RegKey" && pack.DetectConditions.Expression != "CliX86RegKey")
-                            continue;
-
-                        if (pack.DetectConditions.Conditions.Length != 1)
-                            throw new Exception("Unexpected number of conditions on " + pack.ID);
-
-                        var cond = pack.DetectConditions.Conditions[0];
-
-                        var key = cond["registryKey"];
-                        if (!key.StartsWith(@"HKEY_LOCAL_MACHINE\SOFTWARE\"))
-                            continue;
-                        if (!key.EndsWith(@"\dotnet\Setup\InstalledVersions\x64\sdk") &&
-                            !key.EndsWith(@"\dotnet\Setup\InstalledVersions\x86\sdk"))
-                            continue;
-
-                        if (cond["registryType"] != "Integer")
-                            throw new Exception("Unexpected 'registryType' for " + pack.ID);
-                        if (cond["registryData"] != "1")
-                            throw new Exception("Unexpected 'registryData' for " + pack.ID);
-
-                        var ver = cond["registryValue"];
-                        ret.Add(SdkVersion.Parse(ver));
-                    }
-                }
+            foreach (var instance in Directory.GetDirectories(instancesDir))
+            {
+                GetDotNetCoreSdksFromInstance(ret, instance);
             }
 
             return ret;
+        }
+
+        private static void GetDotNetCoreSdksFromInstance(HashSet<SdkVersion> ret, string instancePath)
+        {
+            Catalog catalog;
+
+            using (var fs = File.OpenRead(Path.Combine(instancePath, "catalog.json")))
+            using (var reader = new JsonTextReader(new StreamReader(fs)))
+            {
+                var ser = new JsonSerializer();
+                catalog = ser.Deserialize<Catalog>(reader);
+            }
+
+            foreach (var pack in catalog.Packages)
+            {
+                if (!pack.ID.StartsWith("Microsoft.Net.Core.SDK."))
+                    continue;
+                if (pack.DetectConditions == null)
+                    continue;
+                if (pack.DetectConditions.Expression != "CliX64RegKey" && pack.DetectConditions.Expression != "CliX86RegKey")
+                    continue;
+
+                if (pack.DetectConditions.Conditions.Length != 1)
+                    throw new Exception("Unexpected number of conditions on " + pack.ID);
+
+                var cond = pack.DetectConditions.Conditions[0];
+
+                var key = cond["registryKey"];
+                if (!key.StartsWith(@"HKEY_LOCAL_MACHINE\SOFTWARE\"))
+                    continue;
+                if (!key.EndsWith(@"\dotnet\Setup\InstalledVersions\x64\sdk") &&
+                    !key.EndsWith(@"\dotnet\Setup\InstalledVersions\x86\sdk"))
+                    continue;
+
+                if (cond["registryType"] != "Integer")
+                    throw new Exception("Unexpected 'registryType' for " + pack.ID);
+                if (cond["registryData"] != "1")
+                    throw new Exception("Unexpected 'registryData' for " + pack.ID);
+
+                var ver = cond["registryValue"];
+                ret.Add(SdkVersion.Parse(ver));
+            }
         }
 
         class Catalog
