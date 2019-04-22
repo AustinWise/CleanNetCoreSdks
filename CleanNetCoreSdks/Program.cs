@@ -15,6 +15,9 @@ namespace Austin.CleanNetCoreSdks
 
         static void Usage(OptionSet opts)
         {
+            Console.Error.WriteLine(typeof(Program).Assembly.GetName().Name + ": deletes unneeded .NET Core SDKs.");
+            Console.Error.WriteLine();
+            Console.Error.WriteLine("Options:");
             opts.WriteOptionDescriptions(Console.Error);
         }
 
@@ -22,7 +25,7 @@ namespace Austin.CleanNetCoreSdks
         {
             var oldColor = Console.ForegroundColor;
             Console.ForegroundColor = color;
-            Console.Error.WriteLine(msg);
+            Console.WriteLine(msg);
             Console.ForegroundColor = oldColor;
         }
 
@@ -30,12 +33,14 @@ namespace Austin.CleanNetCoreSdks
         {
             var prog = new Program();
 
+            bool help = false;
             var opts = new OptionSet()
             {
                 { "ignore-visual-studio", "Do not pin SDK version bands pinned by Visual Studio.", v => prog.IgnoreVisualStudio = v != null },
                 { "pin-by-runtime", "Pin by included runtime version rather than SDK band.", v => prog.KeepOnlyLastVersionPerRuntime = v != null },
                 { "f|force", "Do not prompt, just start delelting SDKs.", v => prog.Force = v != null },
                 { "n|dry-run", "Print what would be deleted, then exit.", v => prog.DryRun = v != null },
+                { "h|?|help", "Print help.", v => help = v != null },
             };
 
             try
@@ -46,9 +51,15 @@ namespace Austin.CleanNetCoreSdks
                     Console.Error.WriteLine("Unexpected options:");
                     foreach (var a in extra)
                     {
-                        Console.Error.WriteLine("\t" + extra);
+                        Console.Error.WriteLine("\t" + a);
                     }
                     Console.Error.WriteLine();
+                    Usage(opts);
+                    return EXIT_ARGS;
+                }
+
+                if (help)
+                {
                     Usage(opts);
                     return EXIT_ARGS;
                 }
