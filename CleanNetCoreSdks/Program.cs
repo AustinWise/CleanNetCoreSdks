@@ -240,6 +240,12 @@ namespace Austin.CleanNetCoreSdks
                 Console.WriteLine($"{c.FallbackFolderPath}: would delete {c.FilesToDeleteCount} of {totalFiles} files, freeing {c.SpaceSavingInBytes / 1024 / 1024} MiB");
             }
 
+            if (cleaners.Sum(c => c.FilesToDeleteCount) == 0)
+            {
+                Console.WriteLine("No files to delete from NuGetFallbackFolder");
+                return;
+            }
+
             if (DryRun)
                 return;
 
