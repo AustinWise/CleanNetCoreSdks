@@ -70,6 +70,7 @@
     <Compile Include="Microsoft.DotNet.Archive\ProgressReport.cs" />
     <Compile Include="Mono.Options.cs" />
     <Compile Include="NugetFallbackCleaner.cs" />
+    <Compile Include="RestoreNugetFallbackFolder.cs" />
     <Compile Include="SdkVersion.cs" />
     <Compile Include="Uninstaller.cs" />
     <Compile Include="VSCatalog.cs" />

@@ -41,6 +41,7 @@ namespace Austin.CleanNetCoreSdks
                 { "r|pin-by-runtime", "Pin by included runtime version rather than SDK band.", v => prog.KeepOnlyLastVersionPerRuntime = true },
                 { "s|preserve-sdk", "Do no uninstall SDKs (default true, useful if you want to clean NuGetFallbackFolder)", v => prog.CleanSdks = false },
                 { "u|clean-nuget-fallback", "Clean NuGetFallbackFolder (default false)", v => prog.CleanNugetFallback = true },
+                { "e|restore-nuget-fallback", "Clean NuGetFallbackFolder (default false)", v => prog.RestoreNugetFallback = true },
                 { "f|force", "Do not prompt, just start delelting SDKs.", v => prog.Force = true },
                 { "n|dry-run", "Print what would be deleted, then exit.", v => prog.DryRun = true },
                 { "h|?|help", "Print help.", v => help = true },
@@ -95,6 +96,8 @@ namespace Austin.CleanNetCoreSdks
 
         bool CleanNugetFallback { get; set; }
 
+        bool RestoreNugetFallback { get; set; }
+
         bool IgnoreVisualStudio { get; set; }
 
         bool KeepOnlyLastVersionPerRuntime { get; set; }
@@ -127,14 +130,17 @@ namespace Austin.CleanNetCoreSdks
             if (Force && DryRun)
                 throw new ExitException($"Cannot define both {OptionName(nameof(Force))} and {OptionName(nameof(DryRun))}.");
 
-            if (!CleanSdks && !CleanNugetFallback)
-                throw new ExitException("Commanded to neither clean SDKs nor NuGetFallbackFolder, therefore doing nothing.");
+            if (!CleanSdks && !CleanNugetFallback && !RestoreNugetFallback)
+                throw new ExitException("Not action commanded, therefore doing nothing.");
 
             if (CleanSdks)
                 DoCleanSdks();
 
             if (CleanNugetFallback)
                 DoCleanNugetFallback();
+
+            if (RestoreNugetFallback)
+                DoRestoreNugetFallback();
         }
 
         private void DoCleanSdks()
@@ -214,17 +220,10 @@ namespace Austin.CleanNetCoreSdks
 
         private void DoCleanNugetFallback()
         {
-            var progFiles = new string[] {
-                Environment.GetEnvironmentVariable("ProgramFiles(x86)"),
-                Environment.GetEnvironmentVariable("ProgramFiles")
-            };
             var cleaners = new List<NugetFallbackCleaner>();
 
-            foreach (var programFiles in progFiles.Where(p => p != null).Distinct())
+            foreach (var dotnetFolder in GetDotnetFolders())
             {
-                var dotnetFolder = Path.Combine(programFiles, "dotnet");
-                if (!Directory.Exists(dotnetFolder))
-                    continue;
                 cleaners.Add(new NugetFallbackCleaner(dotnetFolder));
             }
 
@@ -256,6 +255,33 @@ namespace Austin.CleanNetCoreSdks
             else
             {
                 Console.WriteLine("Not cleaning Nuget fallback folder per user request.");
+            }
+        }
+
+        private void DoRestoreNugetFallback()
+        {
+            if (DryRun)
+                return;
+
+            foreach (var dotnetFolder in GetDotnetFolders())
+            {
+                new RestoreNugetFallbackFolder(dotnetFolder).Restore();
+            }
+        }
+
+        static IEnumerable<string> GetDotnetFolders()
+        {
+            var progFiles = new string[] {
+                Environment.GetEnvironmentVariable("ProgramFiles(x86)"),
+                Environment.GetEnvironmentVariable("ProgramFiles")
+            };
+
+            foreach (var programFiles in progFiles.Where(p => p != null).Distinct())
+            {
+                var dotnetFolder = Path.Combine(programFiles, "dotnet");
+                if (!Directory.Exists(dotnetFolder))
+                    continue;
+                yield return dotnetFolder;
             }
         }
     }
