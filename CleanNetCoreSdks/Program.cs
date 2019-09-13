@@ -252,6 +252,9 @@ namespace Austin.CleanNetCoreSdks
             if (DryRun)
                 return;
 
+            if (!Security.IsUserAdmin())
+                throw new ExitException("User is not an administrator, exiting.");
+
             if (!Force)
                 Console.Write("Type 'yes' to delete files from fallback folder: ");
             if (Force || Console.ReadLine() == "yes")
@@ -271,6 +274,9 @@ namespace Austin.CleanNetCoreSdks
         {
             if (DryRun)
                 return;
+
+            if (!Security.IsUserAdmin())
+                throw new ExitException("User is not an administrator, exiting.");
 
             foreach (var dotnetFolder in GetDotnetFolders())
             {
