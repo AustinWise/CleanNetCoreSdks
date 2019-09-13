@@ -1,6 +1,7 @@
 ﻿using Mono.Options;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -36,11 +37,14 @@ namespace Austin.CleanNetCoreSdks
             bool help = false;
             var opts = new OptionSet()
             {
-                { "ignore-visual-studio", "Do not pin SDK version bands pinned by Visual Studio.", v => prog.IgnoreVisualStudio = v != null },
-                { "pin-by-runtime", "Pin by included runtime version rather than SDK band.", v => prog.KeepOnlyLastVersionPerRuntime = v != null },
-                { "f|force", "Do not prompt, just start delelting SDKs.", v => prog.Force = v != null },
-                { "n|dry-run", "Print what would be deleted, then exit.", v => prog.DryRun = v != null },
-                { "h|?|help", "Print help.", v => help = v != null },
+                { "i|ignore-visual-studio", "Do not pin SDK version bands pinned by Visual Studio.", v => prog.IgnoreVisualStudio = true },
+                { "r|pin-by-runtime", "Pin by included runtime version rather than SDK band.", v => prog.KeepOnlyLastVersionPerRuntime = true },
+                { "s|preserve-sdk", "Do no uninstall SDKs (default true, useful if you want to clean NuGetFallbackFolder)", v => prog.CleanSdks = false },
+                { "u|clean-nuget-fallback", "Clean NuGetFallbackFolder (default false)", v => prog.CleanNugetFallback = true },
+                { "e|restore-nuget-fallback", "Clean NuGetFallbackFolder (default false)", v => prog.RestoreNugetFallback = true },
+                { "f|force", "Do not prompt, just start delelting SDKs.", v => prog.Force = true },
+                { "n|dry-run", "Print what would be deleted, then exit.", v => prog.DryRun = true },
+                { "h|?|help", "Print help.", v => help = true },
             };
 
             try
@@ -88,6 +92,12 @@ namespace Austin.CleanNetCoreSdks
             }
         }
 
+        bool CleanSdks { get; set; } = true;
+
+        bool CleanNugetFallback { get; set; }
+
+        bool RestoreNugetFallback { get; set; }
+
         bool IgnoreVisualStudio { get; set; }
 
         bool KeepOnlyLastVersionPerRuntime { get; set; }
@@ -120,6 +130,21 @@ namespace Austin.CleanNetCoreSdks
             if (Force && DryRun)
                 throw new ExitException($"Cannot define both {OptionName(nameof(Force))} and {OptionName(nameof(DryRun))}.");
 
+            if (!CleanSdks && !CleanNugetFallback && !RestoreNugetFallback)
+                throw new ExitException("Not action commanded, therefore doing nothing.");
+
+            if (CleanSdks)
+                DoCleanSdks();
+
+            if (CleanNugetFallback)
+                DoCleanNugetFallback();
+
+            if (RestoreNugetFallback)
+                DoRestoreNugetFallback();
+        }
+
+        private void DoCleanSdks()
+        {
             var installedSdk = DotNetCoreSdk.GetInstalledSdks();
             HashSet<SdkVersion> vsVersions;
             if (IgnoreVisualStudio)
@@ -169,7 +194,6 @@ namespace Austin.CleanNetCoreSdks
 
             if (DryRun)
             {
-                Console.WriteLine("Dry run, exiting.");
                 return;
             }
 
@@ -193,7 +217,80 @@ namespace Austin.CleanNetCoreSdks
             }
             else
             {
-                throw new ExitException("Uninstall aborted by user.");
+                Console.WriteLine("Not cleaning SDKs per user request.");
+            }
+        }
+
+        private void DoCleanNugetFallback()
+        {
+            var cleaners = new List<NugetFallbackCleaner>();
+
+            foreach (var dotnetFolder in GetDotnetFolders())
+            {
+                cleaners.Add(new NugetFallbackCleaner(dotnetFolder));
+            }
+
+            foreach (var c in cleaners)
+            {
+                c.FindFilesToDelete();
+            }
+
+            Console.WriteLine();
+
+            foreach (var c in cleaners)
+            {
+                int totalFiles = c.FilesToDeleteCount + c.FilesToKeepCount;
+                Console.WriteLine($"{c.FallbackFolderPath}: would delete {c.FilesToDeleteCount} of {totalFiles} files, freeing {c.SpaceSavingInBytes / 1024 / 1024} MiB");
+            }
+
+            if (cleaners.Sum(c => c.FilesToDeleteCount) == 0)
+            {
+                Console.WriteLine("No files to delete from NuGetFallbackFolder");
+                return;
+            }
+
+            if (DryRun)
+                return;
+
+            if (!Force)
+                Console.Write("Type 'yes' to delete files from fallback folder: ");
+            if (Force || Console.ReadLine() == "yes")
+            {
+                foreach (var c in cleaners)
+                {
+                    c.DeleteFiles();
+                }
+            }
+            else
+            {
+                Console.WriteLine("Not cleaning Nuget fallback folder per user request.");
+            }
+        }
+
+        private void DoRestoreNugetFallback()
+        {
+            if (DryRun)
+                return;
+
+            foreach (var dotnetFolder in GetDotnetFolders())
+            {
+                new RestoreNugetFallbackFolder(dotnetFolder).Restore();
+            }
+        }
+
+        static IEnumerable<string> GetDotnetFolders()
+        {
+            var progFiles = new string[] {
+                Environment.GetEnvironmentVariable("ProgramFiles(x86)"),
+                Environment.GetEnvironmentVariable("ProgramFiles")
+            };
+
+            foreach (var programFiles in progFiles.Where(p => p != null).Distinct())
+            {
+                var dotnetFolder = Path.Combine(programFiles, "dotnet");
+                if (!Directory.Exists(dotnetFolder))
+                    continue;
+                yield return dotnetFolder;
             }
         }
     }
