@@ -16,7 +16,10 @@ namespace Austin.CleanNetCoreSdks
         {
             mDotnetPath = dotnetPath;
             mSdksFolder = Path.Combine(mDotnetPath, "sdk");
-            mSdkVersions = Directory.GetDirectories(mSdksFolder).Select(p => Path.GetFileName(p)).Where(p => p.StartsWith("2.")).ToList();
+            if (Directory.Exists(mSdksFolder))
+                mSdkVersions = Directory.GetDirectories(mSdksFolder).Select(p => Path.GetFileName(p)).Where(p => p.StartsWith("2.")).ToList();
+            else
+                mSdkVersions = new List<string>();
         }
 
         public void Restore()

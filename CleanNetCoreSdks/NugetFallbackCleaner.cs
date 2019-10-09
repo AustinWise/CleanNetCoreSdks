@@ -17,6 +17,7 @@ namespace Austin.CleanNetCoreSdks
 {
     class NugetFallbackCleaner
     {
+        readonly bool mNothingToDo;
         readonly string mDotnetPath;
         readonly string mSdksFolder;
         readonly string mFallbackFolder;
@@ -30,20 +31,30 @@ namespace Austin.CleanNetCoreSdks
             mDotnetPath = dotnetPath;
             mSdksFolder = Path.Combine(mDotnetPath, "sdk");
             mFallbackFolder = Path.Combine(mSdksFolder, "NuGetFallbackFolder");
-            mSdkVersions = Directory.GetDirectories(mSdksFolder).Select(p => Path.GetFileName(p)).Where(p => p.StartsWith("2.")).ToList();
-            mFilesToKeep = new HashSet<string>(mSdkVersions.Select(sdk => Path.Combine(mFallbackFolder, sdk + ".dotnetSentinel")), StringComparer.OrdinalIgnoreCase);
-            mFilesToDelete = new List<string>();
+            if (Directory.Exists(mSdksFolder) && Directory.Exists(mFallbackFolder))
+            {
+                mSdkVersions = Directory.GetDirectories(mSdksFolder).Select(p => Path.GetFileName(p)).Where(p => p.StartsWith("2.")).ToList();
+                mFilesToKeep = new HashSet<string>(mSdkVersions.Select(sdk => Path.Combine(mFallbackFolder, sdk + ".dotnetSentinel")), StringComparer.OrdinalIgnoreCase);
+                mFilesToDelete = new List<string>();
+            }
+            else
+            {
+                mNothingToDo = true;
+            }
         }
 
         public string FallbackFolderPath => mFallbackFolder;
 
-        public int FilesToDeleteCount => mFilesToDelete.Count;
-        public int FilesToKeepCount => mFilesToKeep.Count;
+        public int FilesToDeleteCount => mFilesToDelete?.Count ?? 0;
+        public int FilesToKeepCount => mFilesToKeep?.Count ?? 0;
 
         public long SpaceSavingInBytes { get; private set; }
 
         public void FindFilesToDelete()
         {
+            if (mNothingToDo)
+                return;
+
             Parallel.ForEach(mSdkVersions, GetFilesToKeep);
 
             long spaceSaving = 0;
@@ -62,6 +73,9 @@ namespace Austin.CleanNetCoreSdks
 
         public void DeleteFiles()
         {
+            if (mNothingToDo)
+                return;
+
             foreach (var f in mFilesToDelete)
             {
                 File.Delete(f);
