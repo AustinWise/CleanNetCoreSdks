@@ -154,6 +154,10 @@ namespace Austin.CleanNetCoreSdks
                 vsVersions = VSCatalog.GetVsUsedVersions();
                 if (vsVersions.Count == 0)
                 {
+                    //VS 2019 16.3 stops depending on .NET SDKs less than version 3.0. Instead it installs the
+                    //shared .NET Core runtime and ASP.NET core runtimes without the associated SDKs.
+                    //I think this means that while we can't pin SDKs from Visual Studio, there are no SDKs to pin,
+                    //so we won't uninstall anything that is needed.
                     WriteWithColor(ConsoleColor.Yellow, "WARNING: Could not find any installed Visual Studio version.");
                 }
             }
