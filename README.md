@@ -8,7 +8,7 @@ where there is no package manager to uninstall old versions of SDKs when upgradi
 This program supports uninstalling .NET Core 3.0 and later SDKs and runtimes.
 
 The policy for deciding which SDKs and runtimes to keep is simple: the latest version of each major
-version is kept and all others are deleted. The depednacy of SDK on runtime is also taken into account
+version is kept and all others are deleted. The dependency of SDK on runtime is also taken into account
 when deciding which versions of runtimes to keep.
 
 ## TODO
