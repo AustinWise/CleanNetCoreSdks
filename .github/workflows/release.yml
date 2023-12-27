@@ -20,14 +20,14 @@ jobs:
       RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.md
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Create release body file
         shell: bash
         run: |
           if [ "${{ github.ref_type }}" = "tag" ]; then
             git tag -l ${{ github.ref }} --format='%(contents)' > $RELEASE_BODY_FILE_NAME
           else
-            echo '# test release\nplease ignore' > $RELEASE_BODY_FILE_NAME
+            printf "# test release\nplease ignore" > $RELEASE_BODY_FILE_NAME
           fi
       - name: Create GitHub release
         id: release
@@ -52,9 +52,9 @@ jobs:
           - rid: linux-x64
             os: ubuntu
             image: ubuntu-20.04
-          - rid: linux-arm64
-            os: ubuntu
-            image: ubuntu-20.04
+        #   - rid: linux-arm64
+        #     os: ubuntu
+        #     image: ubuntu-20.04
           - rid: osx-x64
             os: macos
             image: macos-12
@@ -71,26 +71,24 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           # This is needed for Nerdbank.GitVersioning.
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
             dotnet-version: 8.0.x
 
-      - name: Restore dependencies
-        run: dotnet restore -r ${{ matrix.rid }} 
-
       - name: Build
-        run: dotnet publish --no-restore -r ${{ matrix.rid }} -o publish "$PROJECT_FILE_TO_RELEASE"
+        run: dotnet publish "${{ env.PROJECT_FILE_TO_RELEASE }}" -c Release -r ${{ matrix.rid }} -o publish
 
       - name: Build archive
         shell: bash
         run: |
           programName=$(dotnet msbuild -getProperty:AssemblyName "$PROJECT_FILE_TO_RELEASE")
+          echo "programName=$programName" >> $GITHUB_ENV
           staging="${programName}-${{ github.ref_name }}-${{ matrix.rid }}"
           mkdir "$staging"
 
@@ -116,9 +114,39 @@ jobs:
           asset_name: ${{ env.ASSET }}
           asset_content_type: application/octet-stream
 
+      - name: Upload Symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: symbols-${{ matrix.rid }}
+          retention-days: 2
+          path: |
+            publish/*.pdb
+            publish/*.dsym
+            publish/*.dbg
+
+  publish-symbols:
+    needs: ["create-release", "build-release"]
+    runs-on: ubuntu-20.04
+    env:
+      SYMBOL_TARBALL: symbols.tar.gz
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Make symbol tarball
+        run: tar czf ${{ env.SYMBOL_TARBALL }} ./symbols-*
+      - name: Upload symbol tarball
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.SYMBOL_TARBALL }}
+          asset_name: ${{ env.SYMBOL_TARBALL }}
+          asset_content_type: application/octet-stream
+
+
   publish-release:
     if: github.ref_type == 'tag'
-    needs: ["create-release", "build-release"]
+    needs: ["create-release", "build-release", "publish-symbols"]
     runs-on: ubuntu-20.04
     steps:
       - name: Publish release, by setting draft to false
