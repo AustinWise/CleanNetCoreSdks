@@ -67,7 +67,8 @@ class InstalledComponents
         }
         else if (defaultDotnetRoot != null)
         {
-            // this
+            // TODO: maybe detect what the architecture of the installed version actually is.
+            // It does not matter to much though, as currently the architecture is only used for GUI purposes.
             Architecture arch = RuntimeInformation.OSArchitecture;
             builder.Add(arch, new InstalledComponentsForArchitecture(verMap, arch, defaultDotnetRoot, fileProviderProvider(defaultDotnetRoot)));
         }
