@@ -1,0 +1,133 @@
+name: release
+on:
+  push:
+    # Enable when testing release infrastructure on a branch.
+    # branches:
+    # - ci_testing
+    tags:
+      # Despite their appearance, these are NOT regular expressions =(
+      # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*" # prerelease
+
+jobs:
+  create-release:
+    runs-on: ubuntu-20.04
+    outputs:
+      id: ${{ steps.release.outputs.id }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    env:
+      RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.md
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Create release body file
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            git tag -l ${{ github.ref }} --format='%(contents)' > $RELEASE_BODY_FILE_NAME
+          else
+            echo '# test release\nplease ignore' > $RELEASE_BODY_FILE_NAME
+          fi
+      - name: Create GitHub release
+        id: release
+        uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+          draft: true
+          body_path: ${{ env.RELEASE_BODY_FILE_NAME }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
+  build-release:
+    needs: ["create-release"]
+    runs-on: ${{ matrix.image }}
+    env:
+      PROJECT_FILE_TO_RELEASE: CleanDotNetSdks/CleanDotNetSdks.csproj
+    strategy:
+      matrix:
+        include:
+          - rid: linux-x64
+            os: ubuntu
+            image: ubuntu-20.04
+          - rid: linux-arm64
+            os: ubuntu
+            image: ubuntu-20.04
+          - rid: osx-x64
+            os: macos
+            image: macos-12
+          - rid: osx-arm64
+            os: macos
+            image: macos-12
+          - rid: win-x64
+            os: windows
+            image: windows-2022
+          - rid: win-arm64
+            os: windows
+            image: windows-2022
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          # This is needed for Nerdbank.GitVersioning.
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+            dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore -r ${{ matrix.rid }} 
+
+      - name: Build
+        run: dotnet publish --no-restore -r ${{ matrix.rid }} -o publish "$PROJECT_FILE_TO_RELEASE"
+
+      - name: Build archive
+        shell: bash
+        run: |
+          programName=$(dotnet msbuild -getProperty:AssemblyName "$PROJECT_FILE_TO_RELEASE")
+          staging="${programName}-${{ github.ref_name }}-${{ matrix.rid }}"
+          mkdir "$staging"
+
+          cp {README.md,LICENSE} "$staging/"
+
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            cp "publish/${programName}.exe" "$staging/"
+            7z a "$staging.zip" "$staging"
+            echo "ASSET=$staging.zip" >> $GITHUB_ENV
+          else
+            cp "publish/${programName}" "$staging/"
+            tar czf "$staging.tar.gz" "$staging"
+            echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Upload release archive
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/octet-stream
+
+  publish-release:
+    if: github.ref_type == 'tag'
+    needs: ["create-release", "build-release"]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Publish release, by setting draft to false
+        shell: bash
+        run: |
+          curl \
+            -Ssf \
+            -X PATCH \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/${{ needs.create-release.outputs.id }}" \
+            -d '{"draft":false}'
