@@ -8,6 +8,7 @@
     <IsTestProject>true</IsTestProject>
     <RootNamespace>Austin.CleanerUnitTests</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>
