@@ -1,4 +1,5 @@
 ﻿using Mono.Options;
+using System.Reflection;
 using System.Text;
 
 namespace Austin.CleanDotNetSdks;
@@ -31,6 +32,7 @@ class Program
         var prog = new Program();
 
         bool help = false;
+        bool version = false;
         var opts = new OptionSet()
         {
             { "f|force", "Do not prompt, just start deleting SDKs.", v => prog.Force = true },
@@ -41,6 +43,7 @@ class Program
             { "s|keep-only-supported", "Only keep products that are currently in support.", v => prog.KeepOnlySupported = true},
             { "l|load-resources", "Load product information from resources instead of downloading the latest.", v => prog.LoadResources = true },
             { "h|?|help", "Print help.", v => help = true },
+            { "v|version", "Print version.", v => version = true },
         };
 
         try
@@ -62,6 +65,16 @@ class Program
             {
                 Usage(opts);
                 return EXIT_ARGS;
+            }
+
+            if (version)
+            {
+                var asm = typeof(Program).Assembly;
+                var info  = asm?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+                string programName = asm?.GetName().Name ?? "unknown program";
+                string versionText = info?.InformationalVersion ?? "unknown version";
+                Console.WriteLine($"{programName} {versionText}");
+                return EXIT_SUCCESS;
             }
 
             await prog.Run();
