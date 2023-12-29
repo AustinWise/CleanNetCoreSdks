@@ -1,4 +1,7 @@
 name: release
+env:
+  PROJECT_FILE_TO_RELEASE: CleanDotNetSdks/CleanDotNetSdks.csproj
+  ASSEMBLY_NAME: CleanDotNetSdks
 on:
   push:
     # Enable when testing release infrastructure on a branch.
@@ -11,61 +14,29 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-*" # prerelease
 
 jobs:
-  create-release:
-    runs-on: ubuntu-20.04
-    outputs:
-      id: ${{ steps.release.outputs.id }}
-      upload_url: ${{ steps.release.outputs.upload_url }}
-    env:
-      RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.md
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Create release body file
-        shell: bash
-        run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            git tag -l ${{ github.ref }} --format='%(contents)' > $RELEASE_BODY_FILE_NAME
-          else
-            printf "# test release\nplease ignore" > $RELEASE_BODY_FILE_NAME
-          fi
-      - name: Create GitHub release
-        id: release
-        uses: actions/create-release@v1.1.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
-          draft: true
-          body_path: ${{ env.RELEASE_BODY_FILE_NAME }}
-          prerelease: ${{ contains(github.ref_name, '-') }}
 
   build-release:
-    needs: ["create-release"]
     runs-on: ${{ matrix.image }}
-    env:
-      PROJECT_FILE_TO_RELEASE: CleanDotNetSdks/CleanDotNetSdks.csproj
     strategy:
       matrix:
         include:
-          - rid: linux-x64
-            os: ubuntu
+          - arch: x64
+            os: linux
             image: ubuntu-20.04
-        #   - rid: linux-arm64
-        #     os: ubuntu
+        #   - arch: arm64
+        #     os: linux
         #     image: ubuntu-20.04
-          - rid: osx-x64
-            os: macos
+          - arch: x64
+            os: osx
             image: macos-12
-          - rid: osx-arm64
-            os: macos
+          - arch: arm64
+            os: osx
             image: macos-12
-          - rid: win-x64
-            os: windows
+          - arch: x64
+            os: win
             image: windows-2022
-          - rid: win-arm64
-            os: windows
+          - arch: arm64
+            os: win
             image: windows-2022
 
     steps:
@@ -82,80 +53,59 @@ jobs:
             dotnet-version: 8.0.x
 
       - name: Build
-        run: dotnet publish "${{ env.PROJECT_FILE_TO_RELEASE }}" -c Release -r ${{ matrix.rid }} -o publish
+        run: dotnet publish "${{ env.PROJECT_FILE_TO_RELEASE }}" -c Release -r ${{ matrix.os }}-${{ matrix.arch }} -o publish
 
-      - name: Build archive
-        shell: bash
-        run: |
-          programName=$(dotnet msbuild -getProperty:AssemblyName "$PROJECT_FILE_TO_RELEASE")
-          echo "programName=$programName" >> $GITHUB_ENV
-          staging="${programName}-${{ github.ref_name }}-${{ matrix.rid }}"
-          mkdir "$staging"
+      - name: LS
+        run: ls -R publish
 
-          cp {README.md,LICENSE} "$staging/"
-
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            cp "publish/${programName}.exe" "$staging/"
-            7z a "$staging.zip" "$staging"
-            echo "ASSET=$staging.zip" >> $GITHUB_ENV
-          else
-            cp "publish/${programName}" "$staging/"
-            tar czf "$staging.tar.gz" "$staging"
-            echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
-          fi
-
-      - name: Upload release archive
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Output
+        uses: actions/upload-artifact@v4
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.ASSET }}
-          asset_name: ${{ env.ASSET }}
-          asset_content_type: application/octet-stream
+          name: program-${{ matrix.os }}-${{ matrix.arch }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            publish/${{ env.ASSEMBLY_NAME }}
+            publish/${{ env.ASSEMBLY_NAME }}.exe
 
       - name: Upload Symbols
         uses: actions/upload-artifact@v4
         with:
-          name: symbols-${{ matrix.rid }}
-          retention-days: 2
+          name: symbols-${{ matrix.os }}-${{ matrix.arch }}
+          retention-days: 7
+          if-no-files-found: error
           path: |
             publish/*.pdb
-            publish/*.dsym
             publish/*.dbg
+            publish/*.dsym
 
-  publish-symbols:
-    needs: ["create-release", "build-release"]
+  create-release:
+    needs: ["build-release"]
     runs-on: ubuntu-20.04
     env:
       SYMBOL_TARBALL: symbols.tar.gz
     steps:
-      - uses: actions/download-artifact@v4
-      - name: Make symbol tarball
-        run: tar czf ${{ env.SYMBOL_TARBALL }} ./symbols-*
-      - name: Upload symbol tarball
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.SYMBOL_TARBALL }}
-          asset_name: ${{ env.SYMBOL_TARBALL }}
-          asset_content_type: application/octet-stream
-
-
-  publish-release:
-    if: github.ref_type == 'tag'
-    needs: ["create-release", "build-release", "publish-symbols"]
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Publish release, by setting draft to false
-        shell: bash
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Create temp directory
         run: |
-          curl \
-            -Ssf \
-            -X PATCH \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/${{ needs.create-release.outputs.id }}" \
-            -d '{"draft":false}'
+          echo "ARTIFACT_TEMP_DIRECTORY=$(mktemp -d -p ${{ runner.temp }})" >> "$GITHUB_ENV"
+      - name: Download built programs and symbols
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.ARTIFACT_TEMP_DIRECTORY }}
+      - name: Create tarballs
+        run: ./.github/workflows/create-release.sh "${{ env.ASSEMBLY_NAME }}" "${{ env.ARTIFACT_TEMP_DIRECTORY }}"
+      - name: Upload tarballs
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          retention-days: 7
+          compression-level: 0
+          path: |
+            ${{ env.ARTIFACT_TEMP_DIRECTORY }}/*.tar.gz
+            ${{ env.ARTIFACT_TEMP_DIRECTORY }}/*.zip
+      - name: Create release
+        if: github.ref_type == 'tag'
+        run: gh release create ${{ github.ref_name }} --notes-from-tag --verify-tag
