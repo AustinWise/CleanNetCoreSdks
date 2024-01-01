@@ -17,6 +17,8 @@ fi
 assembly_name=$1
 temp_dir=$2
 
+tar czf $temp_dir/symbols.tar.gz $temp_dir/symbols-*/
+
 for d in $temp_dir/program-*/; do
     cp README.md $d/
     cp LICENSE $d/
