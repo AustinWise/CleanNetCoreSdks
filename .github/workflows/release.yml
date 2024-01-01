@@ -5,8 +5,8 @@ env:
 on:
   push:
     # Enable when testing release infrastructure on a branch.
-    # branches:
-    # - ci_testing
+    branches:
+    - ci_testing
     tags:
       # Despite their appearance, these are NOT regular expressions =(
       # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
@@ -23,9 +23,9 @@ jobs:
           - arch: x64
             os: linux
             image: ubuntu-20.04
-        #   - arch: arm64
-        #     os: linux
-        #     image: ubuntu-20.04
+          - arch: arm64
+            os: linux
+            image: ubuntu-20.04
           - arch: x64
             os: osx
             image: macos-12
@@ -40,6 +40,21 @@ jobs:
             image: windows-2022
 
     steps:
+      - name: Install Linux Arm64 crossbuild packages
+        if: ${{ matrix.os == 'linux' && matrix.arch == 'arm64' }}
+        run: |
+          # based on https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile#linux
+          sudo dpkg --add-architecture arm64
+          # NOTE: when updated the image (ubuntu-20.04), the names below must also be updated
+          sudo bash -c 'cat > /etc/apt/sources.list.d/arm64.list <<EOF
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ focal main restricted
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ focal-updates main restricted
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ focal-backports main restricted universe multiverse
+          EOF'
+          sudo sed -i -e 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list
+          sudo sed -i -e 's/deb mirror/deb [arch=amd64] mirror/g' /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y clang llvm binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu zlib1g-dev:arm64
 
       - name: Checkout repository
         uses: actions/checkout@v4
