@@ -26,15 +26,15 @@
     </ItemGroup>
 
     <PropertyGroup>
-        <CompressedProductInfoPath>$(BaseIntermediateOutputPath)\Products.zip</CompressedProductInfoPath>
+        <CompressedProductInfoPath>$(BaseIntermediateOutputPath)/Products.zip</CompressedProductInfoPath>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProductInfoInput Include="resources\*" />
+        <ProductInfoInput Include="resources/*" />
         <EmbeddedResource Include="$(CompressedProductInfoPath)" LogicalName="Products.zip" />
     </ItemGroup>
 
-    <Target Name="ZipProductInfo" BeforeTargets="Build" Inputs="@(ProductInfoInput)" Outputs="$(CompressedProductInfoPath)">
+    <Target Name="ZipProductInfo" BeforeTargets="CoreCompile" Inputs="@(ProductInfoInput)" Outputs="$(CompressedProductInfoPath)">
         <ZipDirectory SourceDirectory="resources" DestinationFile="$(CompressedProductInfoPath)" Overwrite="true" />
     </Target>
 
