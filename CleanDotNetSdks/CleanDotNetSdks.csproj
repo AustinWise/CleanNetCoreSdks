@@ -32,6 +32,8 @@
     <ItemGroup>
         <ProductInfoInput Include="resources/*" />
         <EmbeddedResource Include="$(CompressedProductInfoPath)" LogicalName="Products.zip" />
+        <!-- Only load DLLs from System32 -->
+        <LinkerArg Include="/DEPENDENTLOADFLAG:0x800" Condition="$(RuntimeIdentifier.StartsWith('win'))" />
     </ItemGroup>
 
     <Target Name="ZipProductInfo" BeforeTargets="CoreCompile" Inputs="@(ProductInfoInput)" Outputs="$(CompressedProductInfoPath)">
