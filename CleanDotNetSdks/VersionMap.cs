@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Compression;
 using System.Reflection;
 using Microsoft.Deployment.DotNet.Releases;
 using VerMap = System.Collections.Generic.Dictionary<Microsoft.Deployment.DotNet.Releases.ReleaseVersion, Microsoft.Deployment.DotNet.Releases.ReleaseVersion>;
@@ -31,14 +32,13 @@ public class VersionMap(Dictionary<ReleaseVersion, ProductRelease> productVersio
         VerMap runtimeSharedFxMap = new();
         VerMap aspnetSharedFxMap = new();
 
-        const string RESOURCE_PREFIX = "Austin.CleanDotNetSdks.resources.";
-
+        ZipArchive? zipArchive = null;
         ProductCollection products;
 
         if (loadFromResource)
         {
-            using var stream = typeof(VersionMap).Assembly.GetManifestResourceStream(RESOURCE_PREFIX + "index.json")!;
-            using var reader = new StreamReader(stream);
+            zipArchive = new ZipArchive(typeof(VersionMap).Assembly.GetManifestResourceStream("Products.zip")!);
+            using var reader = new StreamReader(zipArchive.GetEntry("index.json")!.Open());
             products = await GetAsyncFromTextReader(reader);
         }
         else
@@ -54,8 +54,7 @@ public class VersionMap(Dictionary<ReleaseVersion, ProductRelease> productVersio
             IEnumerable<ProductRelease> releases;
             if (loadFromResource)
             {
-                using var stream = typeof(VersionMap).Assembly.GetManifestResourceStream(RESOURCE_PREFIX + product.ProductVersion + ".json")!;
-                using var reader = new StreamReader(stream);
+                using var reader = new StreamReader(zipArchive!.GetEntry(product.ProductVersion + ".json")!.Open());
                 releases = await GetReleasesAsync(reader, product);
             }
             else
