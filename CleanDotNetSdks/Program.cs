@@ -1,5 +1,4 @@
 ﻿using Mono.Options;
-using System.Reflection;
 using System.Security.Principal;
 using System.Text;
 
@@ -70,10 +69,8 @@ class Program
 
             if (version)
             {
-                var asm = typeof(Program).Assembly;
-                var info  = asm?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-                string programName = asm?.GetName().Name ?? "unknown program";
-                string versionText = info?.InformationalVersion ?? "unknown version";
+                string programName = Path.GetFileName(Environment.ProcessPath) ?? "unknown program";
+                string versionText = ThisAssembly.AssemblyInformationalVersion ?? "unknown version";
                 Console.WriteLine($"{programName} {versionText}");
                 return EXIT_SUCCESS;
             }
