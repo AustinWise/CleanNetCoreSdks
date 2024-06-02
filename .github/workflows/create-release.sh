@@ -17,7 +17,7 @@ fi
 assembly_name=$1
 temp_dir=$2
 
-tar czf $temp_dir/symbols.tar.gz $temp_dir/symbols-*/
+echo "$(cd $temp_dir && ls | grep symbols-)" | tar -C $temp_dir -czf $temp_dir/symbols.tar.gz --verbatim-files-from -T /dev/stdin
 
 for d in $temp_dir/program-*/; do
     cp README.md $d/
