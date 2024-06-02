@@ -1,5 +1,6 @@
 ﻿using Mono.Options;
 using System.Reflection;
+using System.Security.Principal;
 using System.Text;
 
 namespace Austin.CleanDotNetSdks;
@@ -140,11 +141,6 @@ class Program
         if (Force && DryRun)
             throw new ExitException($"Cannot define both {OptionName(nameof(Force))} and {OptionName(nameof(DryRun))}.");
 
-        if (OperatingSystem.IsWindows())
-        {
-            throw new ExitException("Windows is not supported, please use the Visual Studio installer or the .NET SDK installers to manage .NET SDK versions");
-        }
-
         var verMap = await VersionMap.LoadAsync(LoadResources);
         var installed = InstalledComponents.Find(verMap);
 
@@ -219,6 +215,16 @@ class Program
         if (DryRun)
         {
             return;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
+            {
+                throw new ExitException("Please re-run this program in an elevated command prompt. Cannot delete files as a non-administrator.");
+            }
         }
 
         if (!Force)

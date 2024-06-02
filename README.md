@@ -2,7 +2,7 @@
 
 WARNING: this program might delete everything you hold dear, run at your own risk!
 
-This program uninstalls .NET SDKs and runtimes on unix-like systems. It is most useful on macOS
+This program uninstalls .NET SDKs and runtimes. It is most useful on macOS
 where there is no package manager to uninstall old versions of SDKs when upgrading to new versions.
 
 This program supports uninstalling .NET Core 3.0 and later SDKs and runtimes.
@@ -13,7 +13,7 @@ when deciding which versions of runtimes to keep.
 
 ## TODO
 
-* Consider invoking `dotnet workloads clean` after cleaning SDKs
+* Consider invoking `dotnet workload clean` after cleaning SDKs
 * Unify the definitions of paths for detecting installed versions and deleting installed version
 * Add more asserts to the `VersionMap` class that ensure this program's assumptions about the mappings
   between different versions of components is correct. Specifically that there is a one-to-one relationship
@@ -23,9 +23,9 @@ when deciding which versions of runtimes to keep.
   Perhaps automatically attempt to elevate permissions using `sudo`?
 * Publish prebuilt binaries, maybe using an automated GitHub Actions build?
 
-## Old version for Windows for early .NET Core SDKs
+## Old version for .NET Core 1.x and 2.x on Windows
 
-Versions of the .NET Core framework prior to version 3 had their own unique challenges. Specifcally
+Versions of the .NET Core framework prior to version 3 had their own unique challenges. Specifically
 they contained a `NugetFallbackFolder` directory that would only ever grow in size.
 
 Given that the last version of the SDK with this problem are out of support as of 2019, this program
