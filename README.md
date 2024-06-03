@@ -1,6 +1,7 @@
 # .NET SDK Cleaner
 
-WARNING: this program might delete everything you hold dear, run at your own risk!
+> [!WARNING]
+> This program might delete everything you hold dear, run at your own risk!
 
 This program uninstalls .NET SDKs and runtimes. It is most useful on macOS
 where there is no package manager to uninstall old versions of SDKs when upgrading to new versions.
