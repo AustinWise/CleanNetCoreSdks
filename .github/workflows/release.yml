@@ -65,7 +65,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-            dotnet-version: 8.0.x
+            dotnet-version: 9.0.x
 
       - name: Build
         run: dotnet publish "${{ env.PROJECT_FILE_TO_RELEASE }}" -c Release -r ${{ matrix.os }}-${{ matrix.arch }} -o publish
